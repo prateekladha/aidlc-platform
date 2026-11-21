@@ -45,9 +45,16 @@ const PAGES: Record<string, string> = { home: 'home.html', signin: 'signin.html'
 const UI_BUILD = new Date().toISOString();   // stamped per server start; shows in <meta> + console
 function serveHtml(res: http.ServerResponse, name: string) {
     let html = fs.readFileSync(path.join(process.cwd(), 'src', 'http', PAGES[name]), 'utf8');
+    // Version watcher: when a new build is deployed, the next CTA click reloads to it (focus/interval poll
+    // flips a `stale` flag; no full navigations already fetch fresh HTML thanks to no-store).
+    const watcher = `<script>(function(){var B=${JSON.stringify(UI_BUILD)};console.info('AIDLC UI build',B);var stale=false;`
+        + `function chk(){fetch('/version',{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.build&&j.build!==B)stale=true}).catch(function(){})}`
+        + `setInterval(chk,120000);document.addEventListener('visibilitychange',function(){if(!document.hidden)chk()});chk();`
+        + `document.addEventListener('click',function(e){if(!stale)return;if(!e.target.closest('a,button,[data-go],[data-view],[data-scroll],.btn'))return;e.preventDefault();e.stopPropagation();location.reload()},true);`
+        + `})();</script>`;
     html = html
         .replace('</head>', `<meta name="aidlc-build" content="${UI_BUILD}"></head>`)
-        .replace('</body>', `<script>console.info('AIDLC UI build', ${JSON.stringify(UI_BUILD)})</script></body>`);
+        .replace('</body>', `${watcher}</body>`);
     // HTML is never cached — the inline CSS lives in it, so a stale HTML = stale everything (this was the bug).
     res.writeHead(200, {
         'Content-Type': 'text/html; charset=utf-8',
@@ -66,6 +73,10 @@ const server = http.createServer(async (req, res) => {
         const m = req.method || 'GET';
         if (m === 'OPTIONS') { res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type,Authorization', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS' }); return res.end(); }
         if (p === '/healthz') return send(res, 200, { ok: true, service: 'aidlc-platform' });
+        if (p === '/version') {
+            res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
+            return res.end(JSON.stringify({ build: UI_BUILD }));
+        }
         if (m === 'GET' && p === '/favicon.ico') {
             res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400' });
             res.end('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#7CF29B"/><text x="16" y="23" font-family="system-ui,sans-serif" font-size="19" font-weight="700" text-anchor="middle" fill="#06321d">A</text></svg>');

@@ -1,20 +1,20 @@
-# secrets-init (one-shot) fills a RAM-only tmpfs volume from OCI Vault; the app sources it then runs.
+# secrets-init (one-shot) fills a RAM-only dir from OCI Vault; the app sources it then runs.
+# The shared dir is a /dev/shm bind mount: /dev/shm is tmpfs (RAM) on the host, so secret VALUES
+# never touch disk — and unlike a tmpfs-backed *named volume* (which is per-container RAM, NOT
+# shared), a bind mount of one host path is genuinely shared between the two containers.
 services:
   secrets-init:
     build: { context: ../.., dockerfile: deploy/oci/Dockerfile.secrets }
     env_file: .env
     environment: [ "SECRETS_DIR=/secrets" ]
-    volumes: [ "secrets:/secrets" ]
+    volumes: [ "/dev/shm/aidlc-secrets:/secrets" ]
     restart: "no"
   app:
     build: { context: ../.., dockerfile: deploy/oci/Dockerfile }
     env_file: .env
     environment: [ "SECRETS_DIR=/secrets" ]
-    volumes: [ "secrets:/secrets:ro" ]
+    volumes: [ "/dev/shm/aidlc-secrets:/secrets:ro" ]
     ports: [ "80:8787" ]
     depends_on:
       secrets-init: { condition: service_completed_successfully }
     restart: unless-stopped
-volumes:
-  secrets:
-    driver_opts: { type: tmpfs, device: tmpfs }   # RAM-only — secrets never hit disk

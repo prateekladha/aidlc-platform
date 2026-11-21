@@ -58,8 +58,11 @@ function serveHtml(res: http.ServerResponse, name: string) {
         + `function chk(){fetch('/version',{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.build&&j.build!==B)toast()}).catch(function(){})}`
         + `setInterval(chk,120000);document.addEventListener('visibilitychange',function(){if(!document.hidden)chk()});chk();`
         + `})();</script>`;
+    // Global CTA fix: `.btn{all:unset}` resets box-sizing to content-box, so `.btn.block` (width:100%)
+    // + padding overflowed its container by 28px on every page. Restore border-box for all buttons.
+    const globalFix = `<style>.btn,.authbtn,.btn.block,button.btn{box-sizing:border-box!important}</style>`;
     html = html
-        .replace('</head>', `<meta name="aidlc-build" content="${UI_BUILD}"></head>`)
+        .replace('</head>', `${globalFix}<meta name="aidlc-build" content="${UI_BUILD}"></head>`)
         .replace('</body>', `${watcher}</body>`);
     // HTML is never cached — the inline CSS lives in it, so a stale HTML = stale everything (this was the bug).
     res.writeHead(200, {

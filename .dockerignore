@@ -1,0 +1,14 @@
+# Keep the build context (and image) small. node_modules is arch-specific and reinstalled in-image;
+# dev deps are dropped by `npm ci --omit=dev`. Only exclude what is genuinely unused at runtime.
+node_modules
+.git
+dist
+*.log
+.DS_Store
+.env
+*.pem
+.aidlc-wallet
+deploy/oci
+deploy/helm
+.claude
+.vscode

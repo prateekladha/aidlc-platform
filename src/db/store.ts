@@ -20,6 +20,7 @@ export interface DataStore {
     // users
     createUser(u: Omit<User, 'id' | 'createdAt'>): Promise<User>;
     getUser(tenantId: string, id: string): Promise<User | null>;
+    getUserByEmail(email: string): Promise<User | null>;   // global (sign-in): email is unique across tenants
     listUsers(tenantId: string): Promise<User[]>;
     // installations
     createInstallation(i: Omit<Installation, 'id' | 'createdAt'>): Promise<Installation>;
@@ -76,6 +77,10 @@ export class InMemoryDataStore implements DataStore {
     }
     async getUser(tenantId: string, id: string): Promise<User | null> {
         const u = this.users.get(id); return u && u.tenantId === tenantId ? clone(u) : null;
+    }
+    async getUserByEmail(email: string): Promise<User | null> {
+        const e = email.trim().toLowerCase();
+        return clone([...this.users.values()].find((u) => u.email.trim().toLowerCase() === e) ?? null);
     }
     async listUsers(tenantId: string): Promise<User[]> {
         return [...this.users.values()].filter((u) => u.tenantId === tenantId).map(clone);

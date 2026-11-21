@@ -17,8 +17,9 @@ import { InMemoryMeter } from '../billing/meter';
 import { LocalAidlcEngine } from '../runs/engine.aidlc.local';
 import { dispatchRun, type DispatchDeps } from '../runs/dispatch';
 import { TenantContext } from '../tenancy/context';
-import { onboardTenant, connectInstallation, whitelistRepo, storeSecret, submitWorkItem, costSummary } from '../service';
+import { onboardTenant, connectInstallation, whitelistRepo, storeSecret, submitWorkItem, costSummary, signup, login } from '../service';
 import { RazorpayBilling, InMemoryCreditsLedger, CreditsMeter } from '../billing/razorpay';
+import { bearer, verifyToken, type Claims } from '../auth/auth';
 
 let store: DataStore;
 let deps: DispatchDeps;
@@ -40,6 +41,11 @@ async function readJson(req: http.IncomingMessage): Promise<any> {
     const raw = Buffer.concat(chunks).toString('utf8');
     return raw ? JSON.parse(raw) : {};
 }
+const PAGES: Record<string, string> = { home: 'home.html', signin: 'signin.html', app: 'ui.html' };
+function serveHtml(res: http.ServerResponse, name: string) {
+    const html = fs.readFileSync(path.join(process.cwd(), 'src', 'http', PAGES[name]), 'utf8');
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(html);
+}
 
 const server = http.createServer(async (req, res) => {
     try {
@@ -47,14 +53,34 @@ const server = http.createServer(async (req, res) => {
         const p = u.pathname.replace(/\/+$/, '') || '/';
         const seg = p.split('/').filter(Boolean);           // e.g. ['v1','tenants','<id>','work-items']
         const m = req.method || 'GET';
-        if (m === 'OPTIONS') return send(res, 204, {});
+        if (m === 'OPTIONS') { res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type,Authorization', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS' }); return res.end(); }
         if (p === '/healthz') return send(res, 200, { ok: true, service: 'aidlc-platform' });
-        if (m === 'GET' && (p === '/' || p === '/index.html')) {
-            const html = fs.readFileSync(path.join(process.cwd(), 'src', 'http', 'ui.html'), 'utf8');
-            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(html); return;
+        // Pages: public homepage, auth page, and the app (the app itself redirects to /signin if unauthenticated).
+        if (m === 'GET' && (p === '/' || p === '/index.html')) return serveHtml(res, 'home');
+        if (m === 'GET' && p === '/signin') return serveHtml(res, 'signin');
+        if (m === 'GET' && p === '/app') return serveHtml(res, 'app');
+
+        // Auth — public
+        if (m === 'POST' && p === '/v1/auth/signup') {
+            const b = await readJson(req);
+            const r = await signup(store, { email: b.email, password: b.password, workspaceName: b.workspaceName, name: b.name });
+            ctxs.set(r.tenant.id, ctxFor(r.tenant.id));
+            if (b.config) await store.setConfigRow({ tenantId: r.tenant.id, overrides: b.config } as any);
+            return send(res, 201, r);
+        }
+        if (m === 'POST' && p === '/v1/auth/login') {
+            const b = await readJson(req);
+            return send(res, 200, await login(store, { email: b.email, password: b.password }));
+        }
+        if (m === 'GET' && p === '/v1/auth/me') {
+            const c = bearer(req.headers.authorization);
+            if (!c) return send(res, 401, { error: 'not authenticated' });
+            const tenant = await store.getTenant(c.tid); const user = await store.getUser(c.tid, c.sub);
+            if (!tenant || !user) return send(res, 401, { error: 'session no longer valid' });
+            return send(res, 200, { tenant, user });
         }
 
-        // POST /v1/tenants  → onboard
+        // POST /v1/tenants  → onboard (legacy/internal; public path is /v1/auth/signup)
         if (m === 'POST' && p === '/v1/tenants') {
             const b = await readJson(req);
             const { tenant, owner, ctx } = await onboardTenant(store, { slug: b.slug, name: b.name, ownerEmail: b.ownerEmail, modelBilling: b.modelBilling || 'byo_key', plan: b.plan });
@@ -62,9 +88,13 @@ const server = http.createServer(async (req, res) => {
             if (b.config) await store.setConfigRow({ tenantId: tenant.id, overrides: b.config } as any);
             return send(res, 201, { tenant, owner });
         }
-        // /v1/tenants/:tid/...
+        // /v1/tenants/:tid/...  — AUTH-GUARDED: the Bearer token's tenant must match the path tenant.
         if (seg[0] === 'v1' && seg[1] === 'tenants' && seg[2]) {
             const tid = seg[2];
+            // EventSource (SSE) can't set an Authorization header, so the stream route also accepts ?token=.
+            const claims: Claims | null = bearer(req.headers.authorization) || verifyToken(u.searchParams.get('token') || undefined);
+            if (!claims) return send(res, 401, { error: 'not authenticated' });
+            if (claims.tid !== tid) return send(res, 403, { error: 'forbidden: token does not grant access to this workspace' });
             const ctx = ctxFor(tid);
             const sub = seg[3];
             if (m === 'POST' && sub === 'config') { await store.setConfigRow({ tenantId: tid, overrides: (await readJson(req)).overrides } as any); return send(res, 200, { ok: true }); }
@@ -87,6 +117,20 @@ const server = http.createServer(async (req, res) => {
                 return send(res, 200, { ok: true, balance });
             }
             if (m === 'GET' && sub === 'billing' && seg[4] === 'balance') return send(res, 200, { balance: await ledger.balance(tid) });
+            // GET /repos → whitelisted repos (the app uses this to decide onboarding vs. the task list)
+            if (m === 'GET' && sub === 'repos') return send(res, 200, { repos: await ctx.listRepos() });
+            // GET /config → resolved tenant config overrides
+            if (m === 'GET' && sub === 'config') return send(res, 200, { config: (await store.getConfigRow(tid))?.overrides || null });
+            // GET /work-items → the tenant's work items, each with its latest run (state, prUrl, cost)
+            if (m === 'GET' && sub === 'work-items' && !seg[4]) {
+                const { items } = await ctx.listWorkItems({ limit: 50 });
+                const runs = await ctx.listRuns();
+                const withRun = items.map((wi) => ({
+                    ...wi,
+                    run: runs.filter((r) => r.workItemId === wi.id).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0] || null,
+                }));
+                return send(res, 200, { items: withRun });
+            }
             // POST /work-items → create + dispatch ASYNC; return 202 + workItemId
             if (m === 'POST' && sub === 'work-items') {
                 const b = await readJson(req);

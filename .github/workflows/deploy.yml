@@ -1,0 +1,39 @@
+name: Deploy
+# Prod deploy. Runs ONLY on merge to protected main (PRs can't deploy). Builds + pushes the image to OCIR
+# and helm-upgrades the OKE release. Secrets (repo settings → Actions):
+#   OCIR_USER       bmsf4adv5ypr/dt-selfcare-ci
+#   OCIR_TOKEN      auth token for dt-selfcare-ci (manage repos)
+#   KUBECONFIG_B64  base64 of a kubeconfig scoped to a deploy ServiceAccount in the aidlc namespace
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency: deploy-prod   # never two prod deploys at once
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build + push image to OCIR
+        run: |
+          echo "${{ secrets.OCIR_TOKEN }}" | docker login ap-mumbai-1.ocir.io -u "${{ secrets.OCIR_USER }}" --password-stdin
+          IMG=ap-mumbai-1.ocir.io/bmsf4adv5ypr/dt-selfcare/aidlc
+          docker build -f deploy/k8s/Dockerfile -t "$IMG:${{ github.sha }}" -t "$IMG:latest" .
+          docker push "$IMG:${{ github.sha }}"
+          docker push "$IMG:latest"
+
+      - uses: azure/setup-helm@v4
+
+      - name: Helm upgrade on OKE
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "$KUBECONFIG_B64" | base64 -d > "$HOME/.kube/config"
+          export KUBECONFIG="$HOME/.kube/config"
+          helm upgrade --install aidlc deploy/helm/aidlc -n aidlc --create-namespace \
+            --set image.tag="${{ github.sha }}" --wait --timeout 6m
+          kubectl -n aidlc rollout status deploy/aidlc --timeout=180s

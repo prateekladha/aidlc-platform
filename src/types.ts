@@ -23,6 +23,8 @@ export interface User {
     tenantId: string;
     email: string;
     role: Role;
+    passwordHash?: string;   // scrypt hash (sign-in). Absent for invited/SSO users until they set one.
+    name?: string;
     createdAt: string;
 }
 

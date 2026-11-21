@@ -1,0 +1,29 @@
+name: CI
+# PR validation gate. main is protected + requires a PR; these checks must pass before merge.
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install deps
+        run: npm ci
+      - name: Typecheck (tsc --noEmit)
+        run: npm run build
+      - name: Tests (tenant isolation, auth, secrets, billing, engine)
+        run: npm test
+      - name: Helm lint + render
+        uses: azure/setup-helm@v4
+      - run: |
+          helm lint deploy/helm/aidlc
+          helm template aidlc deploy/helm/aidlc > /dev/null
+      - name: Docker build sanity (no push)
+        run: docker build -f deploy/k8s/Dockerfile -t aidlc:ci .

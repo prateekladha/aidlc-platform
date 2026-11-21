@@ -1,0 +1,43 @@
+# Non-secret config for the OKE deployment. Secret VALUES live in OCI Vault and are synced into the cluster
+# by External Secrets (InstancePrincipal) — never checked in. Mirrors dt-telekom's selfcare chart.
+image:
+  registry: ap-mumbai-1.ocir.io/bmsf4adv5ypr/dt-selfcare   # OCIR path the deployer (dt-selfcare-ci) can write
+  repo: aidlc
+  tag: latest
+  pullPolicy: IfNotPresent
+imagePullSecret: ocir-pull                      # created out-of-band (kubectl create secret docker-registry)
+
+# The sslip.io host that resolves to Traefik's LoadBalancer IP. A label before the IP keeps AIDLC on a
+# distinct host from other apps sharing the same ingress. Swap for a real domain (one A record) unchanged.
+domain: aidlc.130-210-124-37.sslip.io
+tls:
+  enabled: true
+  email: ""                                      # optional Let's Encrypt account email
+
+oci:
+  region: ap-mumbai-1
+  vaultId: ocid1.vault.oc1.ap-mumbai-1.fbvqdjkeaaews.abrg6ljrjcfiu7ytc3o2lcxw7hqeqb42rbnh62mtsjpgsgdsyfhnlypvhcva
+  namespace: bmsf4adv5ypr
+
+secretPrefix: ""                                 # aidlc-vault secret names already match env var names 1:1
+
+# Vault secret names → keys in the synced k8s Secret `aidlc-secrets` (also the container env var names).
+secrets:
+  - MASTER_KEK
+  - AIDLC_OPENAI_COMPAT_API_KEY
+  - AIDLC_OPENAI_COMPAT_BASE_URL
+  - AIDLC_OPENAI_COMPAT_MODEL
+  - RAZORPAY_KEY_ID
+  - RAZORPAY_KEY_SECRET
+  - ORACLE_USER
+  - ORACLE_PASSWORD
+  - ORACLE_CONNECT_STRING
+  - ORACLE_WALLET_PASSWORD
+  - ORACLE_WALLET_PEM
+
+app:
+  replicas: 1
+  port: 8787
+  resources:
+    requests: { cpu: 100m, memory: 320Mi }
+    limits: { memory: 900Mi }

@@ -75,6 +75,7 @@ export class PostgresDataStore implements DataStore {
         return full;
     }
     async getUser(tenantId: string, id: string): Promise<User | null> { return one<User>(await this.q('SELECT data FROM users WHERE id=$1 AND tenant_id=$2', [id, tenantId])); }
+    async getUserByEmail(email: string): Promise<User | null> { return one<User>(await this.q(`SELECT data FROM users WHERE lower(data->>'email')=lower($1) LIMIT 1`, [email.trim()])); }
     async listUsers(tenantId: string): Promise<User[]> { return rows<User>(await this.q('SELECT data FROM users WHERE tenant_id=$1', [tenantId])); }
 
     // installations

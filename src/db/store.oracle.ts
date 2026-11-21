@@ -69,6 +69,7 @@ export class OracleDataStore implements DataStore {
         return full;
     }
     async getUser(tenantId: string, id: string): Promise<User | null> { return first<User>(await this.q('SELECT data FROM users WHERE id=:id AND tenant_id=:t', { id, t: tenantId })); }
+    async getUserByEmail(email: string): Promise<User | null> { return first<User>(await this.q(`SELECT data FROM users WHERE LOWER(JSON_VALUE(data, '$.email'))=LOWER(:em) FETCH FIRST 1 ROW ONLY`, { em: email.trim() })); }
     async listUsers(tenantId: string): Promise<User[]> { return rowsData<User>(await this.q('SELECT data FROM users WHERE tenant_id=:t', { t: tenantId })); }
 
     // installations

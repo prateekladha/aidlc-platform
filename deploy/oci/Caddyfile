@@ -1,0 +1,8 @@
+# Caddy fronts the app with automatic HTTPS. The host is an sslip.io name that resolves to the VM's public
+# IP (no domain purchase needed): 132-226-188-77.sslip.io -> 132.226.188.77. Caddy obtains + renews a real
+# Let's Encrypt certificate over the HTTP-01 challenge on :80, and reverse-proxies to the app on the compose
+# network. Swap this hostname for a real domain (one A record) and nothing else changes.
+132-226-188-77.sslip.io {
+	encode gzip
+	reverse_proxy app:8787
+}

@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aidlc
+  labels:
+    app: aidlc
+    {{- include "aidlc.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.app.replicas }}
+  strategy: { type: RollingUpdate, rollingUpdate: { maxUnavailable: 0, maxSurge: 1 } }
+  selector: { matchLabels: { app: aidlc } }
+  template:
+    metadata: { labels: { app: aidlc } }
+    spec:
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      imagePullSecrets: [{ name: {{ .Values.imagePullSecret }} }]
+      containers:
+        - name: aidlc
+          image: {{ include "aidlc.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # All model/DB/billing secret VALUES arrive from the Vault-synced Secret (names == env names).
+          envFrom:
+            - secretRef: { name: aidlc-secrets }
+          env:
+            - { name: PORT, value: {{ .Values.app.port | quote }} }
+            - { name: ORACLE_WALLET_DIR, value: /wallet }    # ewallet.pem mounted from the secret below
+            - { name: HOME, value: /work }
+            - { name: AIDLC_LOCAL_REPO_ROOT, value: /work/runs }
+            - { name: AIDLC_SANDBOX_ROOT, value: /work/sandboxes }
+            - { name: APP_PUBLIC_BASE_URL, value: "https://{{ .Values.domain }}" }
+          ports: [{ name: http, containerPort: {{ .Values.app.port }} }]
+          readinessProbe: { httpGet: { path: /healthz, port: http }, periodSeconds: 10, initialDelaySeconds: 5 }
+          livenessProbe: { httpGet: { path: /healthz, port: http }, periodSeconds: 20, initialDelaySeconds: 20 }
+          resources: {{- toYaml .Values.app.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: wallet, mountPath: /wallet, readOnly: true }
+            - { name: work, mountPath: /work }
+      volumes:
+        - name: wallet
+          secret:
+            secretName: aidlc-secrets
+            items: [{ key: ORACLE_WALLET_PEM, path: ewallet.pem }]
+        - name: work
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aidlc
+  labels: {{- include "aidlc.labels" . | nindent 4 }}
+spec:
+  selector: { app: aidlc }
+  ports: [{ name: http, port: 80, targetPort: http }]

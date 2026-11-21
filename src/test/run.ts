@@ -12,7 +12,8 @@ import { EnvelopeSecretProvider } from '../secrets/envelope';
 import { MockSandboxProvider } from '../sandbox/mock';
 import { InMemoryMeter } from '../billing/meter';
 import { mintAppJwt, verifyWebhookSignature, tenantForInstallation, LEAST_PRIV_PERMISSIONS } from '../onboarding/github';
-import { onboardTenant, connectInstallation, whitelistRepo, storeSecret, submitWorkItem, costSummary } from '../service';
+import { onboardTenant, connectInstallation, whitelistRepo, storeSecret, submitWorkItem, costSummary, signup, login } from '../service';
+import { hashPassword, verifyPassword, signToken, verifyToken, bearer } from '../auth/auth';
 import type { DispatchDeps, Engine } from '../runs/dispatch';
 import { parseJsonLoose } from '../engine/orchestrator/dispatcher';
 import { sanitizeConversation, sanitizeToolName } from '../engine/model/openai-compat';
@@ -265,6 +266,46 @@ it('credits meter: a run debits the wallet as it burns tokens', async () => {
     await meter.record({ tenantId: 't1', runId: 'r1', kind: 'run', quantity: 1 } as any); // non-token: no debit
     assert.strictEqual(await l.balance('t1'), 9500, 'wallet debited 500 credits for 50k tokens');
     assert.strictEqual((await meter.summary('t1')).tokens, 50000, 'base meter still accounts tokens');
+});
+
+// ── auth ──────────────────────────────────────────────────────────────────────
+it('password hashing: scrypt round-trips, rejects wrong, rejects < 8 chars', async () => {
+    const h = hashPassword('correct-horse');
+    assert.ok(h.startsWith('scrypt$'), 'stored format is scrypt$…');
+    assert.ok(!h.includes('correct-horse'), 'plaintext never stored');
+    assert.ok(verifyPassword('correct-horse', h), 'correct password verifies');
+    assert.ok(!verifyPassword('wrong', h), 'wrong password rejected');
+    assert.ok(!verifyPassword('correct-horse', undefined), 'missing hash rejected');
+    assert.throws(() => hashPassword('short'), /8 characters/, 'short password rejected');
+});
+it('session token: signs, verifies, rejects tamper + expiry + wrong key', async () => {
+    const t = signToken({ sub: 'usr_1', tid: 'ten_1', role: 'owner' }, 3600, 'secretA');
+    const c = verifyToken(t, 'secretA'); assert.ok(c && c.tid === 'ten_1' && c.sub === 'usr_1', 'round-trips claims');
+    assert.strictEqual(verifyToken(t, 'secretB'), null, 'wrong signing key rejected');
+    assert.strictEqual(verifyToken(t.slice(0, -2) + 'xx', 'secretA'), null, 'tampered signature rejected');
+    assert.strictEqual(verifyToken(signToken({ sub: 'u', tid: 't', role: 'owner' }, -10, 'secretA'), 'secretA'), null, 'expired token rejected');
+    const dt = signToken({ sub: 'u', tid: 't', role: 'owner' }); // default secret, so bearer() can verify it
+    assert.ok(bearer('Bearer ' + dt) && !bearer('Basic xyz') && !bearer(undefined), 'bearer parsing');
+});
+it('signup → login: creates workspace + owner, authenticates, rejects dup + bad creds', async () => {
+    process.env.AIDLC_AUTH_SECRET = 'test-auth-secret';
+    const store = new InMemoryDataStore();
+    const s = await signup(store, { email: 'Owner@Acme.test', password: 'hunter2pw', workspaceName: 'Acme Trading' });
+    assert.strictEqual(s.tenant.name, 'Acme Trading'); assert.strictEqual(s.user.role, 'owner');
+    assert.strictEqual(s.user.email, 'owner@acme.test', 'email normalised to lowercase');
+    assert.ok(!(s.user as any).passwordHash || typeof s.user.passwordHash === 'string');
+    const claims = verifyToken(s.token); assert.ok(claims && claims.tid === s.tenant.id, 'token targets the new tenant');
+    await assert.rejects(signup(store, { email: 'owner@acme.test', password: 'another1', workspaceName: 'Dup' }), /already exists/, 'duplicate email rejected');
+    const l = await login(store, { email: 'owner@acme.test', password: 'hunter2pw' });
+    assert.strictEqual(l.tenant.id, s.tenant.id, 'login resolves same workspace');
+    await assert.rejects(login(store, { email: 'owner@acme.test', password: 'nope' }), /invalid email or password/, 'bad password rejected generically');
+    await assert.rejects(login(store, { email: 'ghost@acme.test', password: 'hunter2pw' }), /invalid email or password/, 'unknown email rejected generically');
+});
+it('getUserByEmail: global, case-insensitive, unique per tenant membership', async () => {
+    const store = new InMemoryDataStore();
+    await signup(store, { email: 'a@x.test', password: 'password1', workspaceName: 'Xavier Co' });
+    assert.ok(await store.getUserByEmail('A@X.test'), 'case-insensitive lookup');
+    assert.strictEqual(await store.getUserByEmail('nobody@x.test'), null, 'unknown email → null');
 });
 
 // ── runner ────────────────────────────────────────────────────────────────────

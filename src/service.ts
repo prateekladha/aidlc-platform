@@ -8,6 +8,37 @@ import type { SecretProvider } from './secrets/provider';
 import type { Meter } from './billing/meter';
 import { dispatchRun, type DispatchDeps } from './runs/dispatch';
 import type { Tenant, User, ModelBilling, Plan } from './types';
+import { hashPassword, verifyPassword, signToken, slugify } from './auth/auth';
+
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+export interface AuthResult { tenant: Tenant; user: User; token: string; }
+
+/** Public sign-up: create a workspace (tenant) + its owner with a password, return a session token. */
+export async function signup(
+    store: DataStore,
+    input: { email: string; password: string; workspaceName: string; name?: string },
+): Promise<AuthResult> {
+    const email = (input.email || '').trim().toLowerCase();
+    if (!EMAIL_RE.test(email)) throw new Error('enter a valid email address');
+    if ((input.workspaceName || '').trim().length < 2) throw new Error('workspace name is required');
+    if (await store.getUserByEmail(email)) throw new Error('an account with that email already exists — sign in instead');
+    const passwordHash = hashPassword(input.password);   // throws if < 8 chars
+    const tenant = await store.createTenant({ slug: slugify(input.workspaceName), name: input.workspaceName.trim(), plan: 'free', modelBilling: 'byo_key' });
+    const ctx = new TenantContext(store, tenant.id);
+    const user = await ctx.createUser({ email, role: 'owner', passwordHash, name: input.name });
+    const token = signToken({ sub: user.id, tid: tenant.id, role: user.role, email });
+    return { tenant, user, token };
+}
+
+/** Sign in with email + password. Generic error (never reveal which half failed). */
+export async function login(store: DataStore, input: { email: string; password: string }): Promise<AuthResult> {
+    const user = await store.getUserByEmail((input.email || '').trim().toLowerCase());
+    if (!user || !verifyPassword(input.password || '', user.passwordHash)) throw new Error('invalid email or password');
+    const tenant = await store.getTenant(user.tenantId);
+    if (!tenant) throw new Error('workspace not found');
+    const token = signToken({ sub: user.id, tid: tenant.id, role: user.role, email: user.email });
+    return { tenant, user, token };
+}
 
 export async function onboardTenant(
     store: DataStore,

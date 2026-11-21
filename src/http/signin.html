@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Sign in · AIDLC</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
 /* ===================== design tokens ===================== */
 :root{
@@ -1147,9 +1147,8 @@ a{color:inherit;text-decoration:none}
       <label class="tag">Work email</label>
       <input id="email" class="inp" style="margin:6px 0 12px" type="email" placeholder="you@company.com" autocomplete="email">
       <label class="tag">Password</label>
-      <input id="pw" class="inp" style="margin:6px 0 4px" type="password" placeholder="At least 8 characters" autocomplete="current-password">
-      <div class="tag" id="pwHint" style="color:var(--faint);margin:6px 0 10px;display:none">At least 8 characters</div>
-      <button class="btn pri block" id="authGo" style="margin-top:12px">Sign in</button>
+      <input id="pw" class="inp" style="margin:6px 0 0" type="password" placeholder="At least 8 characters" autocomplete="current-password">
+      <button class="btn pri block" id="authGo" style="margin-top:16px">Sign in</button>
       <div id="authErr" style="color:var(--crit);font-size:12px;margin-top:11px;text-align:center;min-height:14px;font-family:var(--font-m)"></div>
       <p style="text-align:center;font-size:12px;color:var(--faint);margin:18px 0 0" id="authAlt"></p>
     </div>
@@ -1165,7 +1164,6 @@ function render(){
   $('authTitle').textContent=su?'Create your workspace':'Welcome back';
   $('authSub').textContent=su?'One workspace per team or product line.':'Sign in to your workspace';
   $('wsField').style.display=su?'block':'none';
-  $('pwHint').style.display=su?'block':'none';
   $('pw').setAttribute('autocomplete',su?'new-password':'current-password');
   $('pw').setAttribute('placeholder',su?'At least 8 characters':'Your password');
   $('authGo').textContent=su?'Create workspace':'Sign in';

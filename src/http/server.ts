@@ -55,6 +55,11 @@ const server = http.createServer(async (req, res) => {
         const m = req.method || 'GET';
         if (m === 'OPTIONS') { res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type,Authorization', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS' }); return res.end(); }
         if (p === '/healthz') return send(res, 200, { ok: true, service: 'aidlc-platform' });
+        if (m === 'GET' && p === '/favicon.ico') {
+            res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400' });
+            res.end('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#7CF29B"/><text x="16" y="23" font-family="system-ui,sans-serif" font-size="19" font-weight="700" text-anchor="middle" fill="#06321d">A</text></svg>');
+            return;
+        }
         // Pages: public homepage, auth page, and the app (the app itself redirects to /signin if unauthenticated).
         if (m === 'GET' && (p === '/' || p === '/index.html')) return serveHtml(res, 'home');
         if (m === 'GET' && p === '/signin') return serveHtml(res, 'signin');

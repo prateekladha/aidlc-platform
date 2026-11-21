@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AIDLC Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0f14;--s1:#121823;--s2:#161d29;--s3:#1c2432;--bd:#212a38;--bd2:#2d3a4d;--fg:#eef2f7;--mut:#8a94a6;--fnt:#5f6b7e;--acc:#7CF29B;--acci:#9af7b4;--ink:#06321d;--warn:#fbbf47;--crit:#f87171;--d:'Space Grotesk',system-ui,sans-serif;--m:'Space Mono',monospace}
+*{box-sizing:border-box}html,body{margin:0}body{background:var(--bg);color:var(--fg);font-family:var(--d);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:var(--acci)}
+.wrap{max-width:1040px;margin:0 auto;padding:26px 18px 80px}
+.top{display:flex;align-items:center;gap:11px;margin-bottom:6px}
+.logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#2fa85a,#7CF29B);color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px}
+.top b{font-size:19px;letter-spacing:-.4px}.top span{color:var(--mut);font-size:12.5px}
+.dek{color:var(--mut);font-size:13.5px;margin:2px 0 22px}
+.steps{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.stp{font-size:11.5px;font-family:var(--m);color:var(--fnt);border:1px solid var(--bd);border-radius:999px;padding:5px 12px}
+.stp.on{color:var(--ink);background:var(--acc);border-color:var(--acc);font-weight:700}
+.stp.done{color:var(--acci);border-color:var(--bd2)}
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:16px;padding:22px 22px 20px;margin-bottom:16px}
+.card h2{font-size:17px;margin:0 0 4px;letter-spacing:-.3px}.card .sub{color:var(--mut);font-size:12.5px;margin:0 0 16px}
+label{display:block;font-size:12px;color:var(--mut);font-weight:500;margin:12px 0 5px}
+input,textarea,select{width:100%;background:var(--s2);border:1px solid var(--bd2);border-radius:9px;color:var(--fg);font-family:var(--d);font-size:14px;padding:10px 12px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--acc)}
+textarea{min-height:92px;resize:vertical;font-size:13.5px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.row{grid-template-columns:1fr}}
+.btn{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:7px;background:var(--s3);border:1px solid var(--bd2);color:var(--fg);font-weight:600;font-size:13.5px;padding:10px 16px;border-radius:9px;margin-top:18px}
+.btn:hover{border-color:var(--bd2);background:#222c3c}
+.btn.pri{background:var(--acc);color:var(--ink);border-color:var(--acc)}.btn.pri:hover{background:var(--acci)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.hint{font-size:11.5px;color:var(--fnt);margin-top:7px}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:var(--m);border-radius:6px;padding:2px 8px;border:1px solid var(--bd2);color:var(--mut)}
+.pill.ok{color:var(--acci);border-color:rgba(124,242,155,.4);background:rgba(124,242,155,.08)}
+/* run console */
+.dag{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 16px}
+.node{flex:1;min-width:92px;border:1px solid var(--bd);border-radius:11px;padding:10px 11px;background:var(--s2)}
+.node .n{font-size:10.5px;font-family:var(--m);color:var(--fnt);text-transform:uppercase;letter-spacing:.4px}
+.node .s{font-size:13px;font-weight:600;margin-top:3px;display:flex;align-items:center;gap:6px}
+.node.run{border-color:var(--warn);animation:bz 1.4s infinite}.node.run .s{color:var(--warn)}
+.node.done{border-color:rgba(124,242,155,.5)}.node.done .s{color:var(--acci)}
+.node.fail{border-color:var(--crit)}.node.fail .s{color:var(--crit)}
+@keyframes bz{50%{box-shadow:0 0 0 3px rgba(251,191,71,.12)}}
+.feed{background:#0d1017;border:1px solid var(--bd);border-radius:11px;padding:12px 14px;font-family:var(--m);font-size:11.5px;line-height:1.85;max-height:280px;overflow:auto;color:#c6cdd8}
+.feed .t{color:var(--fnt)}.feed .g{color:var(--acc)}.feed .w{color:var(--warn)}.feed .r{color:var(--crit)}
+.result{border:1px solid rgba(124,242,155,.5);background:rgba(124,242,155,.06);border-radius:12px;padding:16px 18px;margin-top:16px}
+.result h3{margin:0 0 7px;font-size:15px}
+.result a{font-family:var(--m);font-size:13px;word-break:break-all}
+.gate{border:1px solid var(--warn);background:rgba(251,191,71,.08);color:var(--warn);border-radius:9px;padding:9px 12px;font-size:12.5px;font-weight:600;margin-top:12px}
+.err{color:var(--crit);font-size:12.5px;margin-top:10px;font-family:var(--m)}
+.kv{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--bd)}.kv:last-child{border:0}.kv span{color:var(--mut)}.kv b{font-family:var(--m)}
+.hide{display:none}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="top"><div class="logo">A</div><div><b>AIDLC</b> <span>· autonomous delivery platform</span></div></div>
+  <div class="dek">Onboard, connect a repo, and ship a change — specified, built, tested and PR'd by a governed agent pipeline, held at your gate.</div>
+
+  <div class="steps">
+    <div class="stp on" id="st0">1 · Workspace</div>
+    <div class="stp" id="st1">2 · Connect code</div>
+    <div class="stp" id="st2">3 · Model</div>
+    <div class="stp" id="st3">4 · New work</div>
+  </div>
+
+  <div class="card" id="c0">
+    <h2>Create your workspace</h2><p class="sub">One workspace per team or product line.</p>
+    <div class="row"><div><label>Workspace name</label><input id="wsName" value="Acme Trading"></div>
+    <div><label>Your work email</label><input id="wsEmail" value="owner@acme.test"></div></div>
+    <button class="btn pri" id="go0">Create workspace →</button>
+    <div class="err hide" id="e0"></div>
+  </div>
+
+  <div class="card hide" id="c1">
+    <h2>Connect your code</h2><p class="sub">The platform works on a repo you own. (Local git mode for this build — it pushes / opens the PR via your <code>gh</code>.)</p>
+    <div class="row"><div><label>GitHub account / org</label><input id="acct" value="prateekladha"></div>
+    <div><label>Repository (owner/name)</label><input id="repo" value="prateekladha/rockstar-radar"></div></div>
+    <label>Default branch</label><input id="branch" value="main" style="max-width:220px">
+    <button class="btn pri" id="go1">Connect repo →</button>
+    <div class="err hide" id="e1"></div>
+  </div>
+
+  <div class="card hide" id="c2">
+    <h2>Pick your model</h2><p class="sub">Bring your own key. Route each stage to the model that fits — no lock-in.</p>
+    <div class="row"><div><label>Model</label><select id="model"><option value="deepseek-flash">deepseek-flash (fast · cheap)</option><option value="deepseek-v4-pro">deepseek-v4-pro (strong coder)</option></select></div>
+    <div><label>DeepSeek API key</label><input id="mkey" type="password" placeholder="sk-…"></div></div>
+    <div class="hint">Stored encrypted at rest, injected just-in-time into the run, destroyed with it.</div>
+    <button class="btn pri" id="go2">Save model →</button>
+    <div class="err hide" id="e2"></div>
+  </div>
+
+  <div class="card hide" id="c3">
+    <h2>What should we build?</h2><p class="sub">Describe a change in plain language. The pipeline specifies it, builds it, tests it, and opens a PR for your review.</p>
+    <label>Intent</label>
+    <textarea id="intent">Add a lightweight health-check endpoint `GET /api/health` to the FastAPI backend (under server/) that returns JSON {"status":"ok"} with HTTP 200 for uptime monitoring. It must not require authentication, must be minimal, and must follow the existing route style. Add a regression test.</textarea>
+    <button class="btn pri" id="go3">▶ Run the pipeline</button>
+    <div class="err hide" id="e3"></div>
+  </div>
+
+  <div class="card hide" id="console">
+    <h2>Run console</h2><p class="sub" id="runsub">Specialist agents run each stage; you clear the gate.</p>
+    <div class="dag" id="dag"></div>
+    <div class="feed" id="feed"></div>
+    <div id="out"></div>
+  </div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const S={tid:null,uid:null,instId:null,repoId:null,model:'deepseek-flash'};
+async function api(path,body){const r=await fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||('HTTP '+r.status));return j;}
+function step(n){for(let i=0;i<4;i++){$('st'+i).className='stp'+(i<n?' done':i===n?' on':'');$('c'+i)&&$('c'+i).classList.toggle('hide',i!==n);}}
+function err(id,e){const el=$(id);el.textContent='✗ '+e;el.classList.remove('hide');}
+
+$('go0').onclick=async()=>{try{$('e0').classList.add('hide');
+  const d=await api('/v1/tenants',{slug:'ws-'+Date.now().toString(36),name:$('wsName').value,ownerEmail:$('wsEmail').value,modelBilling:'byo_key',config:{modelProvider:'deepseek',model:S.model,criticModel:'deepseek-flash',maxConcurrentRuns:1}});
+  S.tid=d.tenant.id;S.uid=d.owner.id;step(1);}catch(e){err('e0',e.message);}};
+
+$('go1').onclick=async()=>{try{$('e1').classList.add('hide');
+  const inst=await api(`/v1/tenants/${S.tid}/installations`,{installationId:424242,accountLogin:$('acct').value});S.instId=inst.id;
+  const repo=await api(`/v1/tenants/${S.tid}/repos`,{installationId:inst.id,fullName:$('repo').value,defaultBranch:$('branch').value});S.repoId=repo.id;step(2);}catch(e){err('e1',e.message);}};
+
+$('go2').onclick=async()=>{try{$('e2').classList.add('hide');S.model=$('model').value;
+  await api(`/v1/tenants/${S.tid}/config`,{overrides:{modelProvider:'deepseek',model:S.model,criticModel:'deepseek-flash',maxConcurrentRuns:1}});
+  await api(`/v1/tenants/${S.tid}/secrets`,{name:'MODEL_API_KEY',value:$('mkey').value});step(3);}catch(e){err('e2',e.message);}};
+
+const STAGES=['triage','prd','ux','fix','dev','testing','deploy'];
+function dag(active,done,fail){$('dag').innerHTML=STAGES.map(s=>{const cl=fail===s?'fail':done.includes(s)?'done':active===s?'run':'';const ic=fail===s?'✕':done.includes(s)?'✓':active===s?'◐':'·';return `<div class="node ${cl}"><div class="n">${s}</div><div class="s">${ic} ${cl==='run'?'running':cl==='done'?'done':cl==='fail'?'failed':'—'}</div></div>`;}).join('');}
+function log(t,cls){const f=$('feed');const d=document.createElement('div');d.innerHTML=`<span class="t">${new Date().toLocaleTimeString()}</span> <span class="${cls||''}">${t}</span>`;f.appendChild(d);f.scrollTop=f.scrollHeight;}
+
+$('go3').onclick=async()=>{try{$('e3').classList.add('hide');$('go3').disabled=true;
+  $('console').classList.remove('hide');$('out').innerHTML='';dag(null,[],null);$('feed').innerHTML='';
+  const sub=await api(`/v1/tenants/${S.tid}/work-items`,{repoId:S.repoId,title:$('intent').value.slice(0,60),rawRequest:$('intent').value,userId:S.uid});
+  log('submitted work item '+sub.workItemId,'g');
+  // poll for the run id, then stream events
+  let runId=null;for(let i=0;i<30&&!runId;i++){const r=await api(`/v1/tenants/${S.tid}/work-items/${sub.workItemId}/runs`);if(r.runs&&r.runs[0]){runId=r.runs[0].id;}else await new Promise(z=>setTimeout(z,600));}
+  if(!runId){err('e3','run did not start');$('go3').disabled=false;return;}
+  log('run '+runId+' dispatched','g');
+  const done=[];let active=null;
+  const es=new EventSource(`/v1/tenants/${S.tid}/runs/${runId}/events?stream=1`);
+  es.onmessage=ev=>{let e;try{e=JSON.parse(ev.data);}catch{return;}
+    const p=e.payload||{};const st=e.type;
+    if(st==='stage_start'){active=p.stage;log('▸ '+p.stage+' started','w');dag(active,done,null);}
+    else if(st==='stage_done'){if(active)done.push(active);log('✓ '+p.stage+' done','g');active=null;dag(null,done,null);}
+    else if(st==='error'){log('✕ error: '+(p.error||'').slice(0,160),'r');dag(active,done,active);}
+    else if(st==='local.clone_ready'){log('cloned '+(p.repo||''));}
+    else if(st==='local.deploy_gate_approve'){log('opening PR, then holding at your gate…','w');}
+    else if(st==='run.finished'){
+      es.close();$('go3').disabled=false;
+      const pr=p.prUrl||'';const held=e.payload.state==='awaiting_gate';
+      const prLink=/^https:/.test(pr)?`<a href="${pr}" target="_blank">${pr}</a>`:`<span class="pill">${pr||'no PR'}</span>`;
+      $('out').innerHTML=`<div class="result"><h3>${held&&/^https:/.test(pr)?'✅ Pull request opened — held at your gate':(held?'◑ Held at a human gate':'Run finished')}</h3>
+        <div class="kv"><span>Pull request</span>${prLink}</div>
+        <div class="kv"><span>State</span><b>${p.state}</b></div>
+        <div class="kv"><span>Tokens (metered)</span><b>${(p.costTokens||0).toLocaleString()}</b></div>
+        ${held?'<div class="gate">⏸ Nothing was merged. Review the PR and merge when you\\'re ready — the platform never force-pushes.</div>':''}</div>`;
+      log('run finished · '+p.state,'g');
+    } else if(st==='run.error'){es.close();$('go3').disabled=false;err('e3',(p.error||'run failed').slice(0,200));}
+  };
+  es.onerror=()=>{log('event stream closed','t');};
+}catch(e){err('e3',e.message);$('go3').disabled=false;}};
+</script>
+</body></html>

@@ -1,0 +1,26 @@
+{
+  "name": "aidlc-platform",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Multi-tenant SaaS platform for the AIDLC autonomous-delivery agent.",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "tsx src/test/run.ts"
+  },
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "ajv": "^8.20.0",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.1",
+    "pg-mem": "^3.0.14"
+  }
+}

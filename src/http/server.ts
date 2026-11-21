@@ -42,9 +42,20 @@ async function readJson(req: http.IncomingMessage): Promise<any> {
     return raw ? JSON.parse(raw) : {};
 }
 const PAGES: Record<string, string> = { home: 'home.html', signin: 'signin.html', app: 'ui.html' };
+const UI_BUILD = new Date().toISOString();   // stamped per server start; shows in <meta> + console
 function serveHtml(res: http.ServerResponse, name: string) {
-    const html = fs.readFileSync(path.join(process.cwd(), 'src', 'http', PAGES[name]), 'utf8');
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(html);
+    let html = fs.readFileSync(path.join(process.cwd(), 'src', 'http', PAGES[name]), 'utf8');
+    html = html
+        .replace('</head>', `<meta name="aidlc-build" content="${UI_BUILD}"></head>`)
+        .replace('</body>', `<script>console.info('AIDLC UI build', ${JSON.stringify(UI_BUILD)})</script></body>`);
+    // HTML is never cached — the inline CSS lives in it, so a stale HTML = stale everything (this was the bug).
+    res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+    });
+    res.end(html);
 }
 
 const server = http.createServer(async (req, res) => {

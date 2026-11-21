@@ -42,9 +42,33 @@ async function readJson(req: http.IncomingMessage): Promise<any> {
     return raw ? JSON.parse(raw) : {};
 }
 const PAGES: Record<string, string> = { home: 'home.html', signin: 'signin.html', app: 'ui.html' };
+const UI_BUILD = new Date().toISOString();   // stamped per server start; shows in <meta> + console
 function serveHtml(res: http.ServerResponse, name: string) {
-    const html = fs.readFileSync(path.join(process.cwd(), 'src', 'http', PAGES[name]), 'utf8');
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(html);
+    let html = fs.readFileSync(path.join(process.cwd(), 'src', 'http', PAGES[name]), 'utf8');
+    // Version watcher: when a new build is deployed, the next CTA click reloads to it (focus/interval poll
+    // flips a `stale` flag; no full navigations already fetch fresh HTML thanks to no-store).
+    const watcher = `<script>(function(){var B=${JSON.stringify(UI_BUILD)};console.info('AIDLC UI build',B);var shown=false;`
+        + `function toast(){if(shown)return;shown=true;`
+        + `var s=document.createElement('style');s.textContent='@keyframes aidlcpulse{50%{box-shadow:0 0 0 5px rgba(124,242,155,0)}}';document.head.appendChild(s);`
+        + `var t=document.createElement('div');`
+        + `t.innerHTML='<span style=\\'width:7px;height:7px;border-radius:50%;background:#7CF29B;display:inline-block;box-shadow:0 0 0 0 rgba(124,242,155,.6);animation:aidlcpulse 2s infinite\\'></span><span>New version available</span><button style=\\'all:unset;cursor:pointer;background:#7CF29B;color:#06321d;font-weight:700;padding:5px 12px;border-radius:7px;font-size:12.5px\\'>Update</button>';`
+        + `t.style.cssText='position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(8px);z-index:99999;display:flex;align-items:center;gap:11px;background:#161d29;border:1px solid #2d3a4d;border-radius:12px;padding:10px 12px 10px 15px;color:#eef2f7;font-family:system-ui,-apple-system,sans-serif;font-size:13px;box-shadow:0 14px 44px rgba(0,0,0,.55);opacity:0;transition:opacity .25s ease,transform .25s ease';`
+        + `document.body.appendChild(t);requestAnimationFrame(function(){t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)'});`
+        + `t.onclick=function(){location.reload()};}`
+        + `function chk(){fetch('/version',{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.build&&j.build!==B)toast()}).catch(function(){})}`
+        + `setInterval(chk,120000);document.addEventListener('visibilitychange',function(){if(!document.hidden)chk()});chk();`
+        + `})();</script>`;
+    html = html
+        .replace('</head>', `<meta name="aidlc-build" content="${UI_BUILD}"></head>`)
+        .replace('</body>', `${watcher}</body>`);
+    // HTML is never cached — the inline CSS lives in it, so a stale HTML = stale everything (this was the bug).
+    res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+    });
+    res.end(html);
 }
 
 const server = http.createServer(async (req, res) => {
@@ -55,6 +79,10 @@ const server = http.createServer(async (req, res) => {
         const m = req.method || 'GET';
         if (m === 'OPTIONS') { res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type,Authorization', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS' }); return res.end(); }
         if (p === '/healthz') return send(res, 200, { ok: true, service: 'aidlc-platform' });
+        if (p === '/version') {
+            res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
+            return res.end(JSON.stringify({ build: UI_BUILD }));
+        }
         if (m === 'GET' && p === '/favicon.ico') {
             res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400' });
             res.end('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#7CF29B"/><text x="16" y="23" font-family="system-ui,sans-serif" font-size="19" font-weight="700" text-anchor="middle" fill="#06321d">A</text></svg>');

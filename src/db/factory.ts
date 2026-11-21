@@ -7,6 +7,24 @@ import type { DataStore } from './store';
 import { InMemoryDataStore } from './store';
 
 export async function makeStore(): Promise<DataStore> {
+    // Oracle Autonomous DB (OCI free tier) — set ORACLE_CONNECT_STRING (+ wallet) to use it.
+    if (process.env.ORACLE_CONNECT_STRING) {
+        const oracledb = (await import('oracledb')).default;
+        const pool = await oracledb.createPool({
+            user: process.env.ORACLE_USER || 'ADMIN',
+            password: process.env.ORACLE_PASSWORD,
+            connectString: process.env.ORACLE_CONNECT_STRING,
+            walletLocation: process.env.ORACLE_WALLET_DIR,       // thin-mode mTLS wallet (PEM)
+            walletPassword: process.env.ORACLE_WALLET_PASSWORD,
+            poolMin: 0, poolMax: 4, poolTimeout: 60,
+        });
+        const { OracleDataStore } = await import('./store.oracle');
+        const store = new OracleDataStore(pool);
+        await store.init();
+        // eslint-disable-next-line no-console
+        console.log('[store] Oracle Autonomous DB (ORACLE_CONNECT_STRING)');
+        return store;
+    }
     const url = process.env.DATABASE_URL;
     if (!url) return new InMemoryDataStore();
     const { Pool } = await import('pg');

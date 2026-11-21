@@ -47,10 +47,16 @@ function serveHtml(res: http.ServerResponse, name: string) {
     let html = fs.readFileSync(path.join(process.cwd(), 'src', 'http', PAGES[name]), 'utf8');
     // Version watcher: when a new build is deployed, the next CTA click reloads to it (focus/interval poll
     // flips a `stale` flag; no full navigations already fetch fresh HTML thanks to no-store).
-    const watcher = `<script>(function(){var B=${JSON.stringify(UI_BUILD)};console.info('AIDLC UI build',B);var stale=false;`
-        + `function chk(){fetch('/version',{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.build&&j.build!==B)stale=true}).catch(function(){})}`
+    const watcher = `<script>(function(){var B=${JSON.stringify(UI_BUILD)};console.info('AIDLC UI build',B);var shown=false;`
+        + `function toast(){if(shown)return;shown=true;`
+        + `var s=document.createElement('style');s.textContent='@keyframes aidlcpulse{50%{box-shadow:0 0 0 5px rgba(124,242,155,0)}}';document.head.appendChild(s);`
+        + `var t=document.createElement('div');`
+        + `t.innerHTML='<span style=\\'width:7px;height:7px;border-radius:50%;background:#7CF29B;display:inline-block;box-shadow:0 0 0 0 rgba(124,242,155,.6);animation:aidlcpulse 2s infinite\\'></span><span>New version available</span><button style=\\'all:unset;cursor:pointer;background:#7CF29B;color:#06321d;font-weight:700;padding:5px 12px;border-radius:7px;font-size:12.5px\\'>Update</button>';`
+        + `t.style.cssText='position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(8px);z-index:99999;display:flex;align-items:center;gap:11px;background:#161d29;border:1px solid #2d3a4d;border-radius:12px;padding:10px 12px 10px 15px;color:#eef2f7;font-family:system-ui,-apple-system,sans-serif;font-size:13px;box-shadow:0 14px 44px rgba(0,0,0,.55);opacity:0;transition:opacity .25s ease,transform .25s ease';`
+        + `document.body.appendChild(t);requestAnimationFrame(function(){t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)'});`
+        + `t.onclick=function(){location.reload()};}`
+        + `function chk(){fetch('/version',{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.build&&j.build!==B)toast()}).catch(function(){})}`
         + `setInterval(chk,120000);document.addEventListener('visibilitychange',function(){if(!document.hidden)chk()});chk();`
-        + `document.addEventListener('click',function(e){if(!stale)return;if(!e.target.closest('a,button,[data-go],[data-view],[data-scroll],.btn'))return;e.preventDefault();e.stopPropagation();location.reload()},true);`
         + `})();</script>`;
     html = html
         .replace('</head>', `<meta name="aidlc-build" content="${UI_BUILD}"></head>`)

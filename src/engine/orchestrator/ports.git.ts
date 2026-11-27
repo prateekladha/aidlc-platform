@@ -28,8 +28,8 @@ import {
 const pexec = promisify(exec);
 const SANDBOX_ROOT = process.env.AIDLC_SANDBOX_ROOT || path.join(os.tmpdir(), 'aidlc-sandboxes');
 // App identity for commits (shows as the bot author on the PR).
-const GIT_AUTHOR_NAME = process.env.AIDLC_GIT_AUTHOR_NAME || 'perpetuum-aidlc[bot]';
-const GIT_AUTHOR_EMAIL = process.env.AIDLC_GIT_AUTHOR_EMAIL || 'aidlc@perpetuum.local';
+const GIT_AUTHOR_NAME = process.env.AIDLC_GIT_AUTHOR_NAME || 'aidlc-agent[bot]';
+const GIT_AUTHOR_EMAIL = process.env.AIDLC_GIT_AUTHOR_EMAIL || 'agent@aidlc.dev';
 // Optional: reuse an existing node_modules so the sandbox can typecheck without a multi-minute install.
 // Map repoFullName → absolute node_modules path. On this machine the backend's own deps are reused.
 function nodeModulesCacheFor(repoFullName: string): string | undefined {
@@ -296,7 +296,7 @@ class GitCodePort implements CodePort {
 class GcloudPreviewDeployPort implements PreviewDeployPort {
     async deploy(repoFullName: string, branch: string, workItemId: string): Promise<{ url: string; ref: string }> {
         // Repo-aware: each repo needs its OWN preview service (an FE Next.js build ≠ a backend build). Prefer
-        // AIDLC_PREVIEW_SERVICE_<REPO> (e.g. AIDLC_PREVIEW_SERVICE_PERPETUUM_REVE_GROWTH_SITE), else the shared one.
+        // AIDLC_PREVIEW_SERVICE_<REPO> (e.g. AIDLC_PREVIEW_SERVICE_WEB), else the shared one.
         const repoKey = repoFullName.split('/').pop()?.replace(/[^A-Za-z0-9]/g, '_').toUpperCase();
         const svc = process.env[`AIDLC_PREVIEW_SERVICE_${repoKey}`] || process.env.AIDLC_PREVIEW_SERVICE;
         const region = process.env.AIDLC_PREVIEW_REGION || 'asia-south1';

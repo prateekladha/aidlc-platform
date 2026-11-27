@@ -103,8 +103,8 @@ gate with its assertion output — which is exactly the evidence needed to appro
 ## 6. The run page (the UX — how we actually show it)
 
 ```
-┌─ WORK ITEM: "Platform monetization — ticket fee split"  ● Dev · running ───────────────────┐
-│ by Prateek · feature: host-settlement (3 prior changes) · repo: perpettum-backend          │
+┌─ WORK ITEM: "Add a health-check endpoint with a test"  ● Dev · running ─────────────────────┐
+│ by Alex · feature: api-health (3 prior changes) · repo: your-org/backend                    │
 │ cost ₹— · 4m12s elapsed · branch aidlc/wi_742 · [PR pending]                                │
 ├─────────────────────────────────────────────────────────────────────────────────────────────┤
 │  DAG   ✔ PRD ──▶ (UX skipped) ──▶ ◉ DEV ──▶ ○ Testing ⇄ repair ──▶ ○ Deploy ──▶ ○ Analytics…│

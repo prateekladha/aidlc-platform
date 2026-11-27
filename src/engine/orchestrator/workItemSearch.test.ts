@@ -17,7 +17,7 @@ async function seed(n: number) {
         await store.create({
             title: i === 0 ? 'Add host+venue revenue split' : `Work item ${i}`,
             status: { stage: 'triage', state: i % 2 ? 'running' : 'passed' },
-            targetRepo: i === 0 ? 'perpetuumhq/perpettum-backend' : 'perpetuumhq/perpetuum-reve-growth-site',
+            targetRepo: i === 0 ? 'your-org/backend' : 'your-org/web',
             origin: { requester: 'ops', channel: 'web', rawRequest: i === 0 ? 'split the venue cut on paid tickets' : `request ${i}` },
         } as any);
     }

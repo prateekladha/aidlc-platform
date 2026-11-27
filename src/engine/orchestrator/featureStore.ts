@@ -1,5 +1,5 @@
 // Feature registry port — tracks logical "features" (name + paths + change history) the agent has worked on,
-// so later runs can find prior work. The Arango-backed implementation was removed with the Perpetuum/Arango
+// so later runs can find prior work. The Arango-backed implementation was removed with the original database layer
 // coupling; the platform will back this with Postgres behind the same `FeaturePort` interface. Until then the
 // NoopFeaturePort is used (safe, non-persisting) so the dev/git ports run unchanged.
 import type { Feature, FeaturePort } from './types';

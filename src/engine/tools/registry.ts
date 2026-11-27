@@ -4,7 +4,7 @@
 // not obtain the token and could not run a tool — the loop reaches effects only through the broker.
 //
 // STANDALONE PLATFORM: this registry now exposes ONLY the AIDLC dev-agent tools. The Reve Host Copilot tools
-// (events/payouts/insights/guests/invites/broadcast/knowledge/memory) were Perpetuum-coupled and are not part
+// (events/payouts/insights/guests/invites/broadcast/knowledge/memory) were product-specific and are not part
 // of the product; they have been removed with the rest of that coupling.
 import type { Tool, ToolContext, ToolResult, ToolDeclaration } from '../types';
 import { AIDLC_TOOLS } from './aidlc/contracts';

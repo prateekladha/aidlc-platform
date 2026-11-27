@@ -6,7 +6,7 @@
 // Credentials come from the environment (house pattern — every secret is an env var injected at deploy;
 // on the worker Job they are mounted via `--set-secrets`, so the private key never lives in a yaml):
 //   AIDLC_GITHUB_APP_ID        — numeric App ID
-//   AIDLC_GITHUB_INSTALL_ID    — numeric installation ID (the install on @perpetuumhq)
+//   AIDLC_GITHUB_INSTALL_ID    — numeric installation ID (the install on @your-org)
 //   AIDLC_GITHUB_APP_KEY       — the PEM private key (Secret Manager: aidlc-github-app-key)
 // For local iteration, AIDLC_GITHUB_APP_KEY_FILE may point at the .pem on disk instead.
 //
@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import jwt from 'jsonwebtoken';
 
 const GH_API = 'https://api.github.com';
-const UA = 'perpetuum-aidlc';
+const UA = 'aidlc-agent';
 
 export interface GithubAppConfig {
     appId: string;

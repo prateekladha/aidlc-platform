@@ -201,18 +201,14 @@ export const gtmAgent: AgentConfig = {
 };
 
 // ── Multi-repo routing ───────────────────────────────────────────────────────
-// The GitHub App can write to every Perpetuum repo. Triage must pick the ONE repo the change belongs in, and
-// the PR is opened there against that repo's DEFAULT branch (master, or main for giraffe/Spilll — never
-// production). Keep purposes tight so the classifier routes correctly.
+// When a tenant connects more than one repository, triage picks the ONE repo a change belongs in and opens
+// the PR there against that repo's default branch. In a real deploy this catalog is populated from the
+// tenant's connected repos; the entries below are generic placeholders. Keep purposes tight so the
+// classifier routes correctly.
 export const REPO_CATALOG: Array<{ repo: string; purpose: string }> = [
-    { repo: 'perpetuumhq/perpettum-backend', purpose: 'MAIN backend monorepo — all server logic, REST APIs, ArangoDB access, payments/splits, and the agent, for BOTH products (Giraffe = src/giraffe-part, Reve = src/growth-part). Default for any backend/API/DB/business-logic change.' },
-    { repo: 'perpetuumhq/perpetuum-reve-growth-site', purpose: 'Reve RSVP product — Next.js WEB app (guest + host surfaces: /e, /tix, /dashboard, ops console). Frontend changes for Reve.' },
-    { repo: 'perpetuumhq/giraffee-main-website', purpose: 'Giraffe product — Next.js WEB app (frontend). Giraffe-specific UI. (default branch: main)' },
-    { repo: 'perpetuumhq/Spilll-mobile', purpose: 'Reve mobile app — Flutter. Native mobile changes only. (default branch: main)' },
-    { repo: 'perpetuumhq/perpetuum-comm-runner', purpose: 'Transport ONLY — webhooks, WhatsApp (Gupshup), socket.io. BEING DE-SCOPED: route here ONLY for a strictly transport/webhook wiring change, never new business logic.' },
-    { repo: 'perpetuumhq/perpettum-assets', purpose: 'Image/video/PDF asset serving + rendering (posters, OG/share images).' },
-    { repo: 'perpetuumhq/perpettum-admin-backend', purpose: 'Internal admin backend (admin-only operations, separate from the main backend).' },
-    { repo: 'perpetuumhq/perpettum-dashboard', purpose: 'Internal ops/admin dashboard web app.' },
+    { repo: 'your-org/backend', purpose: 'Backend monorepo — server logic, REST APIs, database access, payments/business logic. Default for any backend/API/DB/business-logic change.' },
+    { repo: 'your-org/web', purpose: 'Web frontend — the product UI (pages, components, dashboards). Frontend changes.' },
+    { repo: 'your-org/mobile', purpose: 'Mobile app — native or cross-platform. Native mobile changes only.' },
 ];
 export const REPO_NAMES: ReadonlySet<string> = new Set(REPO_CATALOG.map((r) => r.repo));
 const REPO_CATALOG_TEXT = REPO_CATALOG.map((r) => `  - ${r.repo}: ${r.purpose}`).join('\n');
@@ -236,10 +232,9 @@ export const triageAgent: AgentConfig = {
         '  are "standard". A code change that also needs a DB column change is BOTH its kind AND risk:["migration"].',
         '- targetRepo: WHICH repo this change belongs in. Choose exactly ONE full name from this catalog:',
         REPO_CATALOG_TEXT,
-        '  Judge from the request: backend/API/DB/business-logic → perpettum-backend; a Reve web UI change →',
-        '  perpetuum-reve-growth-site; a Giraffe web UI change → giraffee-main-website; mobile → Spilll-mobile;',
-        '  etc. When unsure between a product FE and the backend, prefer the backend only if the change is',
-        '  server-side. Put the chosen full name in "targetRepo".',
+        '  Judge from the request: backend/API/DB/business-logic → the backend repo; a web UI change → the web',
+        '  repo; a native mobile change → the mobile repo. When unsure between a product FE and the backend,',
+        '  prefer the backend only if the change is server-side. Put the chosen full name in "targetRepo".',
         'If the kind/surface/repo is genuinely ambiguous, reply ONLY {"needsInput":true,"questions":[...]} and stop.',
         'Otherwise reply with ONLY this JSON:',
         '{"kind":...,"surface":...,"complexity":...,"risk":[...],"targetRepo":string,"rationale":string}',
